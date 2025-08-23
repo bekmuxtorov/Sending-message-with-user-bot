@@ -90,8 +90,56 @@ class Database:
         """
         await self.execute(sql, execute=True)
 
-    # ---------------- Users ----------------
+    async def create_table_message(self):
+        sql = """
+        CREATE TABLE IF NOT EXISTS Message (
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL REFERENCES Users(telegram_id) 
+                ON DELETE CASCADE ON UPDATE CASCADE,
+            message_id VARCHAR(255) NULL,
+            message_text TEXT NULL,
+            sending_interval INT NULL,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        );
+        """
+        await self.execute(sql, execute=True)
 
+    # ---------------- Messages ----------------
+    async def add_message(self, user_id, message_text, sending_interval, message_id=None):
+        sql = """
+        INSERT INTO Message (user_id, message_id, message_text, sending_interval) 
+        VALUES ($1, $2, $3, $4) 
+        RETURNING *;
+        """
+        data = await self.execute(sql, user_id, message_id, message_text, sending_interval, fetchrow=True)
+        return data[0] if data else None
+
+    async def select_message(self, **kwargs):
+        sql = "SELECT * FROM Message WHERE "
+        sql, parameters = self.format_args(sql, parameters=kwargs)
+        data = await self.execute(sql, *parameters, fetchrow=True)
+        return {
+            "id": data[0],
+            "user_id": data[1],
+            "message_id": data[2],
+            "message_text": data[3],
+            "sending_interval": data[4],
+            "created_at": data[5],
+            "updated_at": data[6]
+        } if data else None
+
+    async def update_message(self, id, **kwargs):
+        set_query = ", ".join(
+            [f"{key} = ${i}" for i, key in enumerate(kwargs.keys(), start=2)])
+        sql = f"UPDATE Message SET {set_query}, updated_at = NOW() WHERE id = $1 RETURNING *"
+        return await self.execute(sql, id, *kwargs.values(), fetchrow=True)
+
+    async def delete_message(self, id):
+        sql = "DELETE FROM Message WHERE id=$1 RETURNING *"
+        return await self.execute(sql, id, fetchrow=True)
+
+    # ---------------- Users ----------------
     async def add_user(self, telegram_id, first_name, last_name, username=None, language_code="uz"):
         sql = """
         INSERT INTO Users (telegram_id, first_name, last_name, username, language_code) 

@@ -1,2 +1,5 @@
-aiogram~=2.14
-environs~=8.0.0
+aiogram~=2.25.1
+environs~=8.00
+tzdata==2025.2
+telethon==1.40
+asyncpg==0.30.0
