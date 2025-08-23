@@ -80,12 +80,14 @@ class Database:
             id SERIAL PRIMARY KEY,
             user_id BIGINT NOT NULL REFERENCES Users(telegram_id) 
                 ON DELETE CASCADE ON UPDATE CASCADE,
-            start_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            end_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            start_date TIMESTAMP WITH TIME ZONE NULL,
+            end_date TIMESTAMP WITH TIME ZONE NULL,
             is_paid BOOLEAN DEFAULT FALSE,
-            accepted_username_or_first_name VARCHAR(255) NOT NULL,
+            accepted_username_or_first_name VARCHAR(255) NULL,
             created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            is_new_payment BOOLEAN DEFAULT TRUE,
+            reason_for_cancellation VARCHAR(255) NULL
         );
         """
         await self.execute(sql, execute=True)
@@ -152,7 +154,16 @@ class Database:
     async def select_user(self, **kwargs):
         sql = "SELECT * FROM Users WHERE "
         sql, parameters = self.format_args(sql, parameters=kwargs)
-        return await self.execute(sql, *parameters, fetchrow=True)
+        data = await self.execute(sql, *parameters, fetchrow=True)
+        return {
+            "telegram_id": data[0],
+            "first_name": data[1],
+            "last_name": data[2],
+            "username": data[3],
+            "language_code": data[4],
+            "created_at": data[5],
+            "updated_at": data[6]
+        } if data else None
 
     async def update_user(self, telegram_id, **kwargs):
         # kwargs orqali (first_name, last_name, username, language_code, updated_at) o‘zgartiriladi
@@ -211,18 +222,43 @@ class Database:
         return await self.execute(sql, fetch=True)
 
     # ---------------- Payment ----------------
-    async def add_payment(self, user_id, start_date, end_date, is_paid=False, accepted_username_or_first_name=""):
+    async def add_payment(self, user_id, start_date=None, end_date=None, is_paid=False, accepted_username_or_first_name=""):
         sql = """
         INSERT INTO Payment (user_id, start_date, end_date, is_paid, accepted_username_or_first_name) 
         VALUES ($1, $2, $3, $4, $5) 
         RETURNING *;
         """
-        return await self.execute(sql, user_id, start_date, end_date, is_paid, accepted_username_or_first_name, fetchrow=True)
+        data = await self.execute(sql, user_id, start_date, end_date, is_paid, accepted_username_or_first_name, fetchrow=True)
+        return None if not data else {
+            "id": data[0],
+            "user_id": data[1],
+            "start_date": data[2],
+            "end_date": data[3],
+            "is_paid": data[4],
+            "accepted_username_or_first_name": data[5],
+            "created_at": data[6],
+            "updated_at": data[7],
+            "is_new_payment": data[8],
+        }
 
     async def select_payment(self, **kwargs):
         sql = "SELECT * FROM Payment WHERE "
         sql, parameters = self.format_args(sql, parameters=kwargs)
-        return await self.execute(sql, *parameters, fetchrow=True)
+
+        sql += " ORDER BY created_at DESC LIMIT 1"
+
+        data = await self.execute(sql, *parameters, fetchrow=True)
+        return {} if not data else {
+            "id": data[0],
+            "user_id": data[1],
+            "start_date": data[2],
+            "end_date": data[3],
+            "is_paid": data[4],
+            "accepted_username_or_first_name": data[5],
+            "created_at": data[6],
+            "updated_at": data[7],
+            "is_new_payment": data[8],
+        }
 
     async def update_payment(self, payment_id, **kwargs):
         set_query = ", ".join(

@@ -5,16 +5,16 @@ from data.config import TIME_BETWEEN_MESSAGE
 start_button = InlineKeyboardMarkup(row_width=2)
 start_button.insert(InlineKeyboardButton(
     text="🔧 Botni sozlash", callback_data="start_button"))
-start_button.insert(InlineKeyboardButton(
-    text="👨‍💻 Adminga yozish", callback_data="send_message_to_admin"))
+# start_button.insert(InlineKeyboardButton(
+# text="👨‍💻 Adminga yozish", callback_data="send_message_to_admin"))
 
 main_menu_button = InlineKeyboardMarkup(row_width=1)
 main_menu_button.insert(InlineKeyboardButton(
     text="✉️ Xabar yuborish", callback_data="sending_message"))
 # main_menu_button.insert(InlineKeyboardButton(
 #     text="⏰ Xabar yuborishni rejalashtirish", callback_data="sending_message_in_another_time"))
-main_menu_button.insert(InlineKeyboardButton(
-    text="⚙️ Botni sozlash", callback_data="start_button"))
+# main_menu_button.insert(InlineKeyboardButton(
+#     text="⚙️ Botni sozlash", callback_data="start_button"))
 # main_menu_button.insert(InlineKeyboardButton(
 #     text="📂 Mening xabarlarim", callback_data="my_messages"))
 
@@ -51,5 +51,40 @@ async def start_sending_message(sending_message_id):
         text="📤 Xabar yuborishni boshlash", callback_data=f"start_sending_message:{sending_message_id}"))
 
     start_sending_message.insert(InlineKeyboardButton(
-        text="Xabar matnini o'zgartirish", callback_data=f"update_message_text:{sending_message_id}"))
+        text="⚡️Yangi xabar kiritish", callback_data="sending_message"))
     return start_sending_message
+
+pament_inline_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="💳 To‘lov qilish", callback_data="payment")]]
+)
+# [InlineKeyboardButton(
+#     text="📞 Admin bilan bog‘lanish", url="https://t.me/username")]
+# ]
+
+send_payment_check = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="✅ To‘lov chekini yuborish",
+                          callback_data="send_payment_check")]])
+
+
+# async def built_invoice_in_group(payment_id, message_id):
+#     return InlineKeyboardMarkup(row_width=2,
+#                                 inline_keyboard=[
+#                                     [InlineKeyboardButton(text="🔥 Bekor qilish",
+#                                                           callback_data=f"cancel_payment:{payment_id}:{message_id}")],
+#                                     [InlineKeyboardButton(
+#                                         text="✅ To‘lovni tasdiqlash", callback_data=f"accept_payment:{payment_id}:{message_id}")]
+#                                 ])
+
+async def built_invoice_in_group(payment_id, message_id):
+    kb = InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        InlineKeyboardButton(
+            text="🔥 Bekor qilish",
+            callback_data=f"cancel_payment:{payment_id}:{message_id}"
+        ),
+        InlineKeyboardButton(
+            text="✅ To‘lovni tasdiqlash",
+            callback_data=f"accept_payment:{payment_id}:{message_id}"
+        ),
+    )
+    return kb

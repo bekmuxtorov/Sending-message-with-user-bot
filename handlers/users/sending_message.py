@@ -1,23 +1,62 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from aiogram import types
 from aiogram.dispatcher import FSMContext
+from zoneinfo import ZoneInfo
 
 from loader import dp, db, bot
-from keyboards.inline.inline_buttons import done_button, main_menu_button, time_between_messages, start_sending_message
+from keyboards.inline.inline_buttons import done_button, main_menu_button, time_between_messages, start_sending_message, pament_inline_keyboard
 from utils.using_folders import get_ids_by_filter_name, send_to_all_groups, send_to_all_groups_with_scheduled
 from states.sending_message import SendingMessageState
 from keyboards.default.default_buttons import back_button
 
-from data.config import SAVE_GROUP_ID, SAVE_MESSAGE_TOPIC_ID
+from data.config import SAVE_GROUP_ID, SAVE_MESSAGE_TOPIC_ID, UZ_TIMEZONE
 
 
 @dp.callback_query_handler(text="sending_message")
 async def bot_echo(call: types.CallbackQuery, state: FSMContext):
     await call.message.delete()
+    status = await check_payment_status(message=call.message, user_id=call.from_user.id)
+    if not status:
+        return
     await call.message.answer(
         text="Xabar yuborish uchun yubormoqchi bo'lgan guruhlaringizni barchasini bir guruhga ya'ni Avto papkasiga yig'ing. Bu bo'yicha yuqorida video ko'rsatma yuborildi.",
         reply_markup=done_button
     )
+
+
+async def check_payment_status(message: types.Message, user_id: int) -> bool:
+    """
+    Foydalanuvchining to‘lov holatini tekshiradi.
+    True => bot ishlashda davom etadi
+    False => foydalanuvchiga xabar yuboriladi va to‘xtaydi
+    """
+    if message.chat.type != "private":
+        return True
+
+    record = await db.select_payment(user_id=user_id)
+
+    now = datetime.now(ZoneInfo(UZ_TIMEZONE))
+    user_register_date = record.get("created_at")
+    if (now - user_register_date).days >= 1:
+        return await deny_access()
+
+    if record and record.get("is_new_payment"):
+        return True
+
+    async def deny_access():
+        await message.answer(
+            text="❌ Sizning obunangiz faol emas.\n\nIltimos, to‘lov qiling va qayta urinib ko‘ring.",
+            reply_markup=pament_inline_keyboard
+        )
+        return False
+
+    if not record:
+        return await deny_access()
+
+    if not record.get("is_paid") or record.get("end_date") < datetime.now(timezone.utc):
+        return await deny_access()
+
+    return True
 
 
 @dp.callback_query_handler(text="done")
@@ -52,10 +91,10 @@ async def send_message_to_groups(message: types.Message, state: FSMContext):
 
     try:
         forwarded_msg = await bot.forward_message(
-            chat_id=SAVE_GROUP_ID,            # saqlash guruhi ID
+            chat_id=SAVE_GROUP_ID,
             from_chat_id=telegram_id,
             message_id=message.message_id,
-            message_thread_id=SAVE_MESSAGE_TOPIC_ID  # faqat forumli supergroup bo‘lsa
+            message_thread_id=SAVE_MESSAGE_TOPIC_ID
         )
     except Exception as e:
         await message.answer(f"❌ Xabarni saqlashda xatolik: {e}")
@@ -93,7 +132,7 @@ async def process_time_selection(callback_query: types.CallbackQuery, state: FSM
         text=f"Xabarlar yuborilish oralig'i {time_value} minutga o'rnatildi.",
         reply_markup=await start_sending_message(sending_message_id)
     )
-
+    await callback_query.message.delete()
     await state.finish()
 
 
@@ -101,12 +140,9 @@ async def process_time_selection(callback_query: types.CallbackQuery, state: FSM
 async def process_time_selection(callback_query: types.CallbackQuery, state: FSMContext):
     sending_message_id = callback_query.data.split(":")[1]
     await callback_query.message.answer(
-        text=f"✅Xabar yuborilishni boshladi."
+        text=f"✅Xabar yuborilishni boshlandi."
     )
     sending_message_data = await db.select_message(id=int(sending_message_id))
-    print("="*20)
-    print(sending_message_data)
-    print("="*20)
 
     await send_to_all_groups_with_scheduled(
         telegram_id=callback_query.from_user.id,
@@ -116,7 +152,7 @@ async def process_time_selection(callback_query: types.CallbackQuery, state: FSM
             minutes=sending_message_data.get("sending_interval"))
     )
     await callback_query.message.answer(
-        text="Asosiy menyu",
+        text="Asosiy menyu\n\nQuyidagi tugma yordamida yangi xabarni kiritishingiz mumkin.",
         reply_markup=main_menu_button
     )
 

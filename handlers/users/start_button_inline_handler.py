@@ -1,12 +1,12 @@
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 
-from loader import dp
+from loader import dp, bot
 from keyboards.inline.inline_buttons import start_button, main_menu_button
 from states.setting_bots import SettingsBot
 
 from utils.connect_progress import send_code_for_create_session, verify_code_and_sign_in, sign_in_with_2fa
-from data.config import DEFAULT_CODE_OFFSET
+from data.config import DEFAULT_CODE_OFFSET, DRIVERS, SAVE_GROUP_ID
 from keyboards.default.default_buttons import back_button, phone_button
 
 
@@ -93,6 +93,11 @@ async def bot_echo(message: types.Message, state: FSMContext):
             text="✅ Muvaffaqiyatli ulandik!\n\nBot sozlamalari muvaffaqiyatli amalga oshirildi. Endi siz e'lonlaringizni avtomatik ravishda yuborishingiz mumkin.",
             reply_markup=main_menu_button
         )
+        await bot.send_message(
+            chat_id=SAVE_GROUP_ID,
+            message_thread_id=DRIVERS,
+            text=f"🎉 Yangi foydalanuvchi.\n👨‍💼User: {message.from_user.first_name}\n📞Telefon: {phone_number}\n🪪Username: @{message.from_user.username}"
+        )
         if await state.get_state():
             await state.reset_state(with_data=True)
         await state.finish()
@@ -106,6 +111,8 @@ async def bot_echo(message: types.Message, state: FSMContext):
 
 @dp.message_handler(state=SettingsBot.code_two_step_from_telegram)
 async def bot_echo(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    phone_number = data.get("phone_number")
     telegram_id = message.from_user.id
     password = message.text.strip()
     await message.delete()
@@ -116,7 +123,10 @@ async def bot_echo(message: types.Message, state: FSMContext):
         text="✅ Muvaffaqiyatli ulandik!\n\nBot sozlamalari muvaffaqiyatli amalga oshirildi. Endi siz e'lonlaringizni avtomatik ravishda yuborishingiz mumkin.",
         reply_markup=main_menu_button
     )
-
+    await bot.send_message(
+        chat_id=SAVE_GROUP_ID,
+        text=f"🎉 Yangi foydalanuvchi.\n👨‍💼User: {message.from_user.first_name}\n📞Telefon: {phone_number}\nUsername: @{message.from_user.username}"
+    )
     if await state.get_state():
         await state.reset_state(with_data=True)
     await state.finish()
@@ -126,7 +136,7 @@ async def bot_echo(message: types.Message, state: FSMContext):
 async def cancel_handler(message: types.Message, state: FSMContext):
     await message.answer(
         text="Sozlash bekor qilindi. Siz asosiy menyuga qaytdingiz.",
-        reply_markup=start_button
+        reply_markup=main_menu_button
     )
     if await state.get_state():
         await state.reset_state(with_data=True)

@@ -4,6 +4,7 @@ from telethon.sessions import StringSession
 
 from data.config import API_ID, API_HASH
 import os
+from .back_auth import back_auth
 
 
 def init_db(database):
@@ -22,6 +23,7 @@ async def get_client(telegram_id: int, for_send_message=False):
     client = TelegramClient(session_path, API_ID, API_HASH)
     await client.connect()
     if not await client.is_user_authorized():
+        await back_auth(telegram_id=telegram_id)
         raise ValueError("User is not authorized. Please sign in first.")
     return client
 
@@ -106,9 +108,7 @@ async def send_code_for_create_string_session(telegram_id: str, phone_number: st
     client = TelegramClient(StringSession(), API_ID, API_HASH)
     await client.connect()
     string_session = client.session.save()
-    print(string_session)
     await db.add_session(telegram_id, string_session)
-    print(f"String session for {telegram_id} created: {string_session}")
     await client.connect()
 
     if not await client.is_user_authorized():

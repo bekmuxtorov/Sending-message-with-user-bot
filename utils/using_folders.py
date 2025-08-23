@@ -19,9 +19,6 @@ async def get_ids_by_filter_name(telegram_id, filter_name=FILTER_NAME, client=No
         client = await get_client(telegram_id, for_send_message=True)
 
     result = await client(GetDialogFiltersRequest())
-    print("=-" * 20)
-    print(f"Dialog filters: {result}")
-    print("=-" * 20)
     await client.disconnect()
 
     peers = []
@@ -30,9 +27,6 @@ async def get_ids_by_filter_name(telegram_id, filter_name=FILTER_NAME, client=No
         if isinstance(f, DialogFilter) and f.title.text == filter_name:
             peers.extend(f.pinned_peers + f.include_peers)
 
-    print("=-" * 20)
-    print(f"Filtered peers: {peers}")
-    print("=-" * 20)
     # clean_peers = [p for p in peers if not isinstance(p, InputPeerUser)]
 
     return peers
@@ -42,9 +36,6 @@ async def send_to_all_groups(telegram_id, message_text: str):
     client = await get_client(telegram_id, for_send_message=True)
     results = await get_ids_by_filter_name(telegram_id, FILTER_NAME, client)
 
-    print("9" * 20)
-    print(f"Yuboriladigan guruhlar: {results}")
-    print("9" * 20)
     await client.disconnect()
 
     await client.connect()
