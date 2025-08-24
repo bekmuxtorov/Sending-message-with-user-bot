@@ -67,7 +67,6 @@ async def check_payment_status(message: types.Message, user_id: int) -> bool:
     record = await db.select_payment(user_id=user_id)
 
     if not record or not record.get("is_paid") or record.get("end_date") < datetime.now(timezone.utc):
-        print(record)
         await message.answer(
             text="❌ Sizning obunangiz faol emas.\n\nIltimos, to‘lov qiling va qayta urinib ko‘ring.",
             reply_markup=pament_inline_keyboard

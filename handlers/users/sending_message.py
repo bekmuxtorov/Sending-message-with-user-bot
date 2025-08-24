@@ -34,27 +34,37 @@ async def check_payment_status(message: types.Message, user_id: int) -> bool:
         return True
 
     record = await db.select_payment(user_id=user_id)
-
+    user_data = await db.select_user(telegram_id=user_id)
     now = datetime.now(ZoneInfo(UZ_TIMEZONE))
-    user_register_date = record.get("created_at")
-    if (now - user_register_date).days >= 1:
-        return await deny_access()
+    user_register_date = user_data.get("created_at")
+
+    if (now - user_register_date).days <= 1:
+        return True
 
     if record and record.get("is_new_payment"):
         return True
-
-    async def deny_access():
+    
+    if (now - user_register_date).days >= 1:
         await message.answer(
             text="❌ Sizning obunangiz faol emas.\n\nIltimos, to‘lov qiling va qayta urinib ko‘ring.",
             reply_markup=pament_inline_keyboard
         )
         return False
 
-    if not record:
-        return await deny_access()
+    # if not record:
+    #     await message.answer(
+    #         text="❌ Sizning obunangiz faol emas.\n\nIltimos, to‘lov qiling va qayta urinib ko‘ring.",
+    #         reply_markup=pament_inline_keyboard
+    #     )
+    #     return False
 
-    if not record.get("is_paid") or record.get("end_date") < datetime.now(timezone.utc):
-        return await deny_access()
+
+    if record and (not record.get("is_paid")) or (record.get("end_date") < datetime.now(timezone.utc)):
+        await message.answer(
+            text="❌ Sizning obunangiz faol emas.\n\nIltimos, to‘lov qiling va qayta urinib ko‘ring.",
+            reply_markup=pament_inline_keyboard
+        )
+        return False
 
     return True
 
