@@ -52,7 +52,19 @@ async def start_sending_message(sending_message_id):
 
     start_sending_message.insert(InlineKeyboardButton(
         text="⚡️Yangi xabar kiritish", callback_data="sending_message"))
+
     return start_sending_message
+
+
+async def finish_sending_message(sending_message_id):
+    start_sending_message = InlineKeyboardMarkup(row_width=1)
+    # start_sending_message.insert(InlineKeyboardButton(
+    #     text="📤 Xabar matnini o'zgartirish", callback_data="sending_message"))
+    start_sending_message.insert(InlineKeyboardButton(
+        text="💥 Yuborishni to'xtatish", callback_data=f"stop_sending_message:{sending_message_id}"))
+
+    return start_sending_message
+
 
 pament_inline_keyboard = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="💳 To‘lov qilish", callback_data="payment")]]

@@ -4,8 +4,8 @@ from aiogram.dispatcher import FSMContext
 from zoneinfo import ZoneInfo
 
 from loader import dp, db, bot
-from keyboards.inline.inline_buttons import done_button, main_menu_button, time_between_messages, start_sending_message, pament_inline_keyboard
-from utils.using_folders import get_ids_by_filter_name, send_to_all_groups, send_to_all_groups_with_scheduled
+from keyboards.inline.inline_buttons import done_button, main_menu_button, time_between_messages, start_sending_message, pament_inline_keyboard, finish_sending_message
+from utils.using_folders import get_ids_by_filter_name, send_to_all_groups, send_to_all_groups_with_scheduled, delete_scheduled_forward
 from states.sending_message import SendingMessageState
 from keyboards.default.default_buttons import back_button
 
@@ -37,27 +37,12 @@ async def check_payment_status(message: types.Message, user_id: int) -> bool:
     user_data = await db.select_user(telegram_id=user_id)
     now = datetime.now(ZoneInfo(UZ_TIMEZONE))
     user_register_date = user_data.get("created_at")
-
+    print(record)
     if (now - user_register_date).days <= 1:
         return True
 
     if record and record.get("is_new_payment"):
         return True
-    
-    if (now - user_register_date).days >= 1:
-        await message.answer(
-            text="❌ Sizning obunangiz faol emas.\n\nIltimos, to‘lov qiling va qayta urinib ko‘ring.",
-            reply_markup=pament_inline_keyboard
-        )
-        return False
-
-    # if not record:
-    #     await message.answer(
-    #         text="❌ Sizning obunangiz faol emas.\n\nIltimos, to‘lov qiling va qayta urinib ko‘ring.",
-    #         reply_markup=pament_inline_keyboard
-    #     )
-    #     return False
-
 
     if record and (not record.get("is_paid")) or (record.get("end_date") < datetime.now(timezone.utc)):
         await message.answer(
@@ -150,9 +135,12 @@ async def process_time_selection(callback_query: types.CallbackQuery, state: FSM
 async def process_time_selection(callback_query: types.CallbackQuery, state: FSMContext):
     sending_message_id = callback_query.data.split(":")[1]
     await callback_query.message.answer(
-        text=f"✅Xabar yuborilishni boshlandi."
+        text=f"✅Xabar yuborilishni boshlandi.",
+        reply_markup=await finish_sending_message(sending_message_id)
     )
     sending_message_data = await db.select_message(id=int(sending_message_id))
+
+    await callback_query.message.delete()
 
     await send_to_all_groups_with_scheduled(
         telegram_id=callback_query.from_user.id,
@@ -161,11 +149,30 @@ async def process_time_selection(callback_query: types.CallbackQuery, state: FSM
         sending_interval=timedelta(
             minutes=sending_message_data.get("sending_interval"))
     )
+    # await callback_query.message.answer(
+    #     text="Asosiy menyu\n\nQuyidagi tugma yordamida yangi xabarni kiritishingiz mumkin.",
+    #     reply_markup=main_menu_button
+    # )
+
+
+@dp.callback_query_handler(lambda c: c.data.startswith("stop_sending_message:"))
+async def process_time_selection(callback_query: types.CallbackQuery, state: FSMContext):
+    sending_message_id = callback_query.data.split(":")[1]
+    sending_message_data = await db.select_message(id=int(sending_message_id))
+    await delete_scheduled_forward(
+        telegram_id=sending_message_data.get("user_id"),
+        message_text=sending_message_data.get("message_text")
+    )
     await callback_query.message.answer(
-        text="Asosiy menyu\n\nQuyidagi tugma yordamida yangi xabarni kiritishingiz mumkin.",
+        text="💥 Xabar yuborilishi muaffaqiyatli to'xtatildi.",
         reply_markup=main_menu_button
     )
-
+    await callback_query.message.delete()
+    # await delete_scheduled_forward(
+    #     telegram_id=sending_message_data.get("user_id"),
+    #     from_peer=SAVE_GROUP_ID,
+    #     message_id=sending_message_id,
+    # )
 # @dp.message_handler(state=SendingMessageState.message_text)
 # async def send_message_to_groups(message: types.Message, state: FSMContext):
 #     # telegram_id = message.from_user.id
