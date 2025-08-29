@@ -9,7 +9,7 @@ from utils.using_folders import get_ids_by_filter_name, send_to_all_groups, send
 from states.sending_message import SendingMessageState
 from keyboards.default.default_buttons import back_button
 
-from data.config import SAVE_GROUP_ID, SAVE_MESSAGE_TOPIC_ID, UZ_TIMEZONE
+from data.config import SAVE_GROUP_ID, SAVE_MESSAGE_TOPIC_ID, UZ_TIMEZONE, USE_FREE_DAY
 
 
 @dp.callback_query_handler(text="sending_message")
@@ -37,8 +37,7 @@ async def check_payment_status(message: types.Message, user_id: int) -> bool:
     user_data = await db.select_user(telegram_id=user_id)
     now = datetime.now(ZoneInfo(UZ_TIMEZONE))
     user_register_date = user_data.get("created_at")
-    print(record)
-    if (now - user_register_date).days <= 1:
+    if (now - user_register_date).days <= USE_FREE_DAY:
         return True
 
     if record and record.get("is_new_payment"):
