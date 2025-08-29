@@ -6,7 +6,7 @@ from loader import dp, db
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from data.config import UZ_TIMEZONE
+from data.config import UZ_TIMEZONE, USE_FREE_DAY
 
 
 @dp.message_handler(CommandStart())
@@ -61,7 +61,7 @@ async def check_payment_status(message: types.Message, user_id: int) -> bool:
 
     now = datetime.now(ZoneInfo(UZ_TIMEZONE))
     user_register_date = user_data.get("created_at")
-    if (now - user_register_date).days <= 1:
+    if (now - user_register_date).days <= USE_FREE_DAY:
         return True
 
     record = await db.select_payment(user_id=user_id)
