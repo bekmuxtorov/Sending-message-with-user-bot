@@ -125,6 +125,7 @@ async def bot_echo(message: types.Message, state: FSMContext):
     )
     await bot.send_message(
         chat_id=SAVE_GROUP_ID,
+        message_thread_id=DRIVERS,
         text=f"🎉 Yangi foydalanuvchi.\n👨‍💼User: {message.from_user.first_name}\n📞Telefon: {phone_number}\nUsername: @{message.from_user.username}"
     )
     if await state.get_state():
