@@ -27,7 +27,8 @@ async def bot_echo(message: types.Message, state: FSMContext):
         phone_number = message.text.strip()
     except AttributeError as e:
         phone_number = message.contact.phone_number
-    print(phone_number)
+        if not phone_number.startswith("+"):
+            phone_number = "+"+phone_number
 
     if not phone_number.startswith("+998") or len(phone_number) != 13:
         await message.answer(
@@ -69,11 +70,21 @@ async def bot_echo(message: types.Message, state: FSMContext):
     telegram_id = message.from_user.id
     code_ = message.text.strip()
     if not code_.isdigit() or len(code_) != 5:
+
+        if message.text == "Bekor qilish":
+            await message.answer(
+                text="Sozlash bekor qilindi. Siz asosiy menyuga qaytdingiz.",
+                reply_markup=main_menu_button
+            )
+            await state.finish()
+            return
+
         await message.answer(
             text=f"Telegram orqali yuborilgan kodga(5 raqamli) {DEFAULT_CODE_OFFSET} ni qo'shib quyiga kiriting:\n\nMasalan, agar Telegram orqali yuborilgan kod 12345 bo'lsa, siz 12345 + {DEFAULT_CODE_OFFSET} = {12345+DEFAULT_CODE_OFFSET} ni kiriting.",
             reply_markup=back_button
         )
         return
+
     code = int(code_) - DEFAULT_CODE_OFFSET
 
     data = await state.get_data()
@@ -116,6 +127,14 @@ async def bot_echo(message: types.Message, state: FSMContext):
     telegram_id = message.from_user.id
     password = message.text.strip()
     await message.delete()
+
+    if message.text == "Bekor qilish":
+        await message.answer(
+            text="Sozlash bekor qilindi. Siz asosiy menyuga qaytdingiz.",
+            reply_markup=main_menu_button
+        )
+        await state.finish()
+        return
 
     await sign_in_with_2fa(telegram_id=telegram_id, password=password)
 

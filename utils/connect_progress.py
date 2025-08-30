@@ -1,3 +1,4 @@
+from telethon.errors import PhoneCodeInvalidError
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 from telethon.sessions import StringSession
@@ -86,6 +87,8 @@ async def verify_code_and_sign_in(telegram_id: str, phone_number: str, code: str
         await db.add_session(telegram_id, session_path)
         return True
     except SessionPasswordNeededError:
+        return False
+    except PhoneCodeInvalidError:
         return False
     finally:
         await client.disconnect()
